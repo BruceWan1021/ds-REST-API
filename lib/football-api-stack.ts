@@ -5,16 +5,17 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as custom from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 import { matches } from "../seed/matches"
+import { generateBatch } from "../shared/util";
 import * as apig from "aws-cdk-lib/aws-apigateway";
 
-export class RestAPIStack extends cdk.Stack {
+export class FootballApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // Tables 
     const matchesTable = new dynamodb.Table(this, "FootballMatchesTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      partitionKey: { name: "id", type: dynamodb.AttributeType.NUMBER },
+      partitionKey: { name: "matchId", type: dynamodb.AttributeType.NUMBER },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "FootballMatches",
     });
@@ -27,7 +28,7 @@ export class RestAPIStack extends cdk.Stack {
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/addMatch.ts`,
+        entry: `${__dirname}/../lambdas/addMatches.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -77,7 +78,3 @@ export class RestAPIStack extends cdk.Stack {
     }
   }
 
-function generateBatch(matches: any) {
-  throw new Error("Function not implemented.");
-}
-    

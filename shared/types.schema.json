@@ -3,10 +3,10 @@
     "definitions": {
       "Match": {
         "type": "object",
-        "required": ["matchId", "teamName", "description"],
+        "required": ["matchId", "teamNameA", "teamNameB", "description"],
         "properties": {
           "matchId": {
-            "type": "string"
+            "type": "number"
           },
           "teamNameA": {
             "type": "string"
