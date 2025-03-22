@@ -36,45 +36,66 @@ export class FootballApiStack extends cdk.Stack {
           REGION: 'eu-west-1',
         },
       }
-      );
+    );
 
-      new custom.AwsCustomResource(this, 'MatchesSeeder', {
-        onCreate: {
-          service: "DynamoDB",
-          action: "batchWriteItem",
-          parameters: {
-            RequestItems: {
-              [matchesTable.tableName]: generateBatch(matches),
-            },
-          },
-          physicalResourceId: custom.PhysicalResourceId.of("MatchesSeederInit"), 
+    const getAllMatchesFn = new lambdanode.NodejsFunction(
+      this,
+      "GetAllMatchesFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/getAllMatches.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: matchesTable.tableName,
+          REGION: 'eu-west-1',
         },
-        policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
-          resources: [matchesTable.tableArn],  
-        }),
-      })
+      }
+    );
+
+    new custom.AwsCustomResource(this, 'MatchesSeeder', {
+      onCreate: {
+        service: "DynamoDB",
+        action: "batchWriteItem",
+        parameters: {
+          RequestItems: {
+            [matchesTable.tableName]: generateBatch(matches),
+          },
+        },
+        physicalResourceId: custom.PhysicalResourceId.of("MatchesSeederInit"), 
+      },
+      policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [matchesTable.tableArn],  
+      }),
+    })
 
       // Permissions 
-      matchesTable.grantWriteData(addMatchFn)
+    matchesTable.grantWriteData(addMatchFn)
+    matchesTable.grantReadData(getAllMatchesFn)
      
-      const api = new apig.RestApi(this, "FootballAPI", {
-        description: "Football Match API",
-        deployOptions: {
-          stageName: "dev",
-        },
-        defaultCorsPreflightOptions: {
-          allowHeaders: ["Content-Type", "X-Amz-Date"],
-          allowMethods: ["OPTIONS", "GET", "POST"],
-          allowCredentials: true,
-          allowOrigins: ["*"],
-        },
-      });
+    const api = new apig.RestApi(this, "FootballAPI", {
+      description: "Football Match API",
+      deployOptions: {
+        stageName: "dev",
+      },
+      defaultCorsPreflightOptions: {
+        allowHeaders: ["Content-Type", "X-Amz-Date"],
+        allowMethods: ["OPTIONS", "GET", "POST"],
+        allowCredentials: true,
+        allowOrigins: ["*"],
+      },
+    });
     
-      const matchesEndpoint = api.root.addResource("matches");
-      matchesEndpoint.addMethod(
-        "POST",
-        new apig.LambdaIntegration(addMatchFn, { proxy: true })
-      );
-    }
+    const matchesEndpoint = api.root.addResource("matches");
+    matchesEndpoint.addMethod(
+      "POST",
+      new apig.LambdaIntegration(addMatchFn, { proxy: true })
+    );
+    matchesEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(getAllMatchesFn, { proxy: true })
+    );
   }
+}
 
