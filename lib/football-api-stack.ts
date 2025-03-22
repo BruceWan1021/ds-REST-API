@@ -4,7 +4,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as custom from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { matches } from "../seed/matches"
 import * as apig from "aws-cdk-lib/aws-apigateway";
 
 export class RestAPIStack extends cdk.Stack {
@@ -37,10 +37,25 @@ export class RestAPIStack extends cdk.Stack {
       }
       );
 
+      new custom.AwsCustomResource(this, 'MatchesSeeder', {
+        onCreate: {
+          service: "DynamoDB",
+          action: "batchWriteItem",
+          parameters: {
+            RequestItems: {
+              [matchesTable.tableName]: generateBatch(matches),
+            },
+          },
+          physicalResourceId: custom.PhysicalResourceId.of("MatchesSeederInit"), 
+        },
+        policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
+          resources: [matchesTable.tableArn],  
+        }),
+      })
+
       // Permissions 
       matchesTable.grantWriteData(addMatchFn)
      
-
       const api = new apig.RestApi(this, "FootballAPI", {
         description: "Football Match API",
         deployOptions: {
@@ -61,4 +76,8 @@ export class RestAPIStack extends cdk.Stack {
       );
     }
   }
+
+function generateBatch(matches: any) {
+  throw new Error("Function not implemented.");
+}
     
