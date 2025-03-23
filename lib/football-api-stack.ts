@@ -7,6 +7,7 @@ import { Construct } from "constructs";
 import { matches } from "../seed/matches"
 import { generateBatch } from "../shared/util";
 import * as apig from "aws-cdk-lib/aws-apigateway";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class FootballApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -103,6 +104,22 @@ export class FootballApiStack extends cdk.Stack {
       }
     );
 
+    const getMatchTranslationFn = new lambdanode.NodejsFunction(
+      this,
+      "GetMatchTranslationFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/getMatchTranslation.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: matchesTable.tableName,
+          REGION: 'eu-west-1',
+        },
+      }
+    )
+
     new custom.AwsCustomResource(this, 'MatchesSeeder', {
       onCreate: {
         service: "DynamoDB",
@@ -125,6 +142,14 @@ export class FootballApiStack extends cdk.Stack {
     matchesTable.grantReadData(getMatchByIdFn)
     matchesTable.grantReadData(getMatchByTeamFn)
     matchesTable.grantReadWriteData(updateMatchFn)
+    matchesTable.grantReadWriteData(getMatchTranslationFn);
+
+    getMatchTranslationFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["translate:TranslateText"],
+        resources: ["*"],
+      })
+    );
      
     const api = new apig.RestApi(this, "FootballAPI", {
       description: "Football Match API",
@@ -163,6 +188,12 @@ export class FootballApiStack extends cdk.Stack {
     matchByTeamEndpoint.addMethod(
       "GET", 
       new apig.LambdaIntegration(getMatchByTeamFn)
+    );
+
+    const translationEndpoint = matchEndpoint.addResource("translation");
+    translationEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(getMatchTranslationFn)
     );
   }
 }
