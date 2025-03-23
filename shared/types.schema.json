@@ -24,6 +24,12 @@
           "teamNames": {
             "type": "array",
             "items": { "type": "string" }
+          },
+          "translations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false
@@ -42,6 +48,23 @@
           "type": "string" 
         }
       },
+      "additionalProperties": false
+    },
+    "MatchUpdate": {
+      "type": "object",
+      "required": ["description"],
+      "properties": {
+        "description": { 
+          "type": "string" 
+        },
+        "teamNameA": { 
+          "type": "string" 
+        },
+        "teamNameB": { 
+          "type": "string" 
+        }
+      },
+      "minProperties": 1,
       "additionalProperties": false
     }
     }

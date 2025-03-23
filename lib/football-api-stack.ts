@@ -84,7 +84,24 @@ export class FootballApiStack extends cdk.Stack {
           REGION: 'eu-west-1',
         },
       }
-    )
+    );
+
+    const updateMatchFn = new lambdanode.NodejsFunction(
+      this, 
+      "UpdateMatchFn", 
+      {
+        
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/updateMatch.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: matchesTable.tableName,
+          REGION: 'eu-west-1',
+        },
+      }
+    );
 
     new custom.AwsCustomResource(this, 'MatchesSeeder', {
       onCreate: {
@@ -107,6 +124,7 @@ export class FootballApiStack extends cdk.Stack {
     matchesTable.grantReadData(getAllMatchesFn)
     matchesTable.grantReadData(getMatchByIdFn)
     matchesTable.grantReadData(getMatchByTeamFn)
+    matchesTable.grantReadWriteData(updateMatchFn)
      
     const api = new apig.RestApi(this, "FootballAPI", {
       description: "Football Match API",
@@ -135,6 +153,10 @@ export class FootballApiStack extends cdk.Stack {
     matchEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getMatchByIdFn, { proxy: true })
+    );
+    matchEndpoint.addMethod(
+      "PUT",
+      new apig.LambdaIntegration(updateMatchFn)
     );
 
     const matchByTeamEndpoint = matchesEndpoint.addResource("by-team"); 
