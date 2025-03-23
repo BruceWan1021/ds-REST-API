@@ -20,10 +20,30 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "teamNames": {
+            "type": "array",
+            "items": { "type": "string" }
           }
         },
         "additionalProperties": false
-      }
+      },
+      "MatchTeamQueryParams": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "matchId": { 
+          "type": "string" 
+        },
+        "teamNameA": { 
+          "type": "string" 
+        },
+        "teamNameB": { 
+          "type": "string" 
+        }
+      },
+      "additionalProperties": false
+    }
     }
   }
   

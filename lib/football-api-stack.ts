@@ -70,6 +70,22 @@ export class FootballApiStack extends cdk.Stack {
       }
     );
 
+    const getMatchByTeamFn = new lambdanode.NodejsFunction(
+      this,
+      "GetMatchByTeamFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/getMatchByTeam.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: matchesTable.tableName,
+          REGION: 'eu-west-1',
+        },
+      }
+    )
+
     new custom.AwsCustomResource(this, 'MatchesSeeder', {
       onCreate: {
         service: "DynamoDB",
@@ -90,6 +106,7 @@ export class FootballApiStack extends cdk.Stack {
     matchesTable.grantWriteData(addMatchFn)
     matchesTable.grantReadData(getAllMatchesFn)
     matchesTable.grantReadData(getMatchByIdFn)
+    matchesTable.grantReadData(getMatchByTeamFn)
      
     const api = new apig.RestApi(this, "FootballAPI", {
       description: "Football Match API",
@@ -118,6 +135,12 @@ export class FootballApiStack extends cdk.Stack {
     matchEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getMatchByIdFn, { proxy: true })
+    );
+
+    const matchByTeamEndpoint = matchesEndpoint.addResource("by-team"); 
+    matchByTeamEndpoint.addMethod(
+      "GET", 
+      new apig.LambdaIntegration(getMatchByTeamFn)
     );
   }
 }
